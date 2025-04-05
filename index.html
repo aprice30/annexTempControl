@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cobblers Nook Heating Control</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    .fixed-width-temp {
+      display: inline-block;
+      width: 8ch; /* enough space for values like 18.5°C */
+    }
+  </style>
+</head>
+<body class="bg-light text-center p-3">
+  <div class="container">
+    <h1 class="mb-4">Cobblers Nook Heating Control</h1>
+    <div class="mb-3">
+        You can control the room temperature using the controls below. The night time temperature is active from 22:00 to 06:00
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">Current Temperature</div>
+      <div class="card-body">
+        <h2 id="currentTemp">Loading...</h2>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">Target Day Temperature</div>
+      <div class="card-body d-flex justify-content-center align-items-center">
+        <button id="dayDec" class="btn btn-danger me-3" onclick="decDayTemp()">-</button>
+        <h3 id="dayTemp" class="fixed-width-temp">Loading...</h3>
+        <button id="dayInc" class="btn btn-success ms-3" onclick="incDayTemp()">+</button>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header" id="nightPeriod">Target Night Temperature</div>
+      <div class="card-body d-flex justify-content-center align-items-center">
+        <button id="nightDec" class="btn btn-danger me-3" onclick="decNightTemp()">-</button>
+        <h3 id="nightTemp" class="fixed-width-temp">Loading...</h3>
+        <button id="nightInc" class="btn btn-success ms-3" onclick="incNightTemp()">+</button>
+      </div>
+    </div>
+
+    <div class="card" hidden>
+      <div class="card-header">Towel Rail Boost</div>
+      <div class="card-body">
+        <p id="boostRemaining">Loading...</p>
+        <button class="btn btn-primary" onclick="boostTowelRail()">Boost for 1hr</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const apiBase = 'https://nodered.home.shephardprice.co.uk';
+
+    async function fetchData() {
+      try {
+        const [tempRes, dayRes, nightRes] = await Promise.all([
+          axios.get(`${apiBase}/api/v1/getCurrentTemp`),
+          axios.get(`${apiBase}/api/v1/getTargetDayTemp`),
+          axios.get(`${apiBase}/api/v1/getTargetNightTemp`),
+        ]);
+
+        document.getElementById('currentTemp').innerText = tempRes.data.temp + '°C';
+        document.getElementById('dayTemp').innerText = dayRes.data.temp + '°C';
+        document.getElementById('nightTemp').innerText = nightRes.data.temp + '°C';
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+    }
+
+    function disableButtons(ids, disabled) {
+      ids.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.disabled = disabled;
+      });
+    }
+
+    async function incDayTemp() {
+        disableButtons(['dayDec', 'dayInc'], true);
+        try {
+            await axios.post(`${apiBase}/api/v1/incDayTemp`);
+            await fetchData();
+        } finally {
+            disableButtons(['dayDec', 'dayInc'], false);
+        }
+    }
+
+    async function decDayTemp() {
+        disableButtons(['dayDec', 'dayInc'], true);
+        try {
+            await axios.post(`${apiBase}/api/v1/decDayTemp`);
+            await fetchData();
+        } finally {
+            disableButtons(['dayDec', 'dayInc'], false);
+        }
+    }
+
+    async function incNightTemp() {
+        disableButtons(['nightDec', 'nightInc'], true);
+        try {
+            await axios.post(`${apiBase}/api/v1/incNightTemp`);
+            await fetchData();
+        } finally {
+            disableButtons(['nightDec', 'nightInc'], false);
+        }
+    }
+
+    async function decNightTemp() {
+        disableButtons(['nightDec', 'nightInc'], true);
+        try {
+            await axios.post(`${apiBase}/api/v1/decNightTemp`);
+            await fetchData();
+        } finally {
+            disableButtons(['nightDec', 'nightInc'], false);
+        }
+    }
+
+    setInterval(fetchData, 10000); // Refresh every 10s
+    fetchData();
+  </script>
+</body>
+</html>
